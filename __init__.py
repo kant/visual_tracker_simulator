@@ -19,6 +19,7 @@ bl_info = {
 import bpy
 from bpy.types import (Panel, Operator)
 import math
+import os
 
 file_path = ""
 
@@ -109,10 +110,8 @@ class SceneControlPanel(Panel):
         col = layout.column(align=True)
         file_tool = context.scene.file_tool
         col.prop(file_tool, "path")
-        print("TEST START")
-        print(file_tool.path)
-        print("TEST END")
-        file_path = file_tool.path
+        file_path = bpy.path.abspath("//") + file_tool.path
+        print(file_path)
         col.operator(SceneControlOperator.bl_idname, text="Run", icon="TRIA_RIGHT")
         # layout.seperator()
 
