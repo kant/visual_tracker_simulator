@@ -1,5 +1,5 @@
 # Visual Tracker Simulator (temporary readme)
-Gets a text file containing parameters as an input, exports a rendered scene and its mask.
+Generates a desired number of scenes to run the tracker on. Then gets a text file containing parameters as an input and exports a rendered scene and its mask.
 
 ## How to instal
 1. Download the zip file, unzip it and place the content in the addon folder in blender.
@@ -7,6 +7,6 @@ Gets a text file containing parameters as an input, exports a rendered scene and
 
 ## How to use
 To access it, you have to press **N** on your keyboard to get the sidebar, then click the Visual Tracker Simulator button.
-To choose your text file, open file explorer or paste your address into the field. Then press run to change your scene according to the
+To choose your text file, open file explorer or paste your address into the field. Then press run to change your scene according to the file.
 
 #### Version 0.0.1
