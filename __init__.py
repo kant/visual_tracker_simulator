@@ -56,8 +56,11 @@ class SceneControlOperator(Operator):
         elif values[0] == "child_of":
             print("Follower control")
             self.child_of_control(values[1])
+        elif values[0] == "fog":
+            print("Fog control")
+            self.fog_control(values[1])
         else:
-            print("other stuff at the moment")
+            print("Unassigned")
 
     # ----------------------------------------------------------------------------------------------
     # STUFF THAT CONTROLS THE SCENE
@@ -77,8 +80,20 @@ class SceneControlOperator(Operator):
 
     # Vehicle density conrol
     def vehicle_density_control(self, traffic_density):
-        # TODO
-        return
+        traffic_car = bpy.data.objects['Nissan']
+
+        layer_collection = bpy.data.collections['GeneratedObjects']
+
+        # Duplicate cars as given by the txt file
+        for i in range(int(traffic_density)):
+            car = traffic_car.copy()
+
+            action = car.animation_data.action
+            car.animation_data.action = action.copy()
+
+            car.animation_data.action = None
+
+            layer_collection.objects.link(car)
 
     def light_control(self, rx, ry, rz):
         light = bpy.data.objects['Sun']
@@ -91,8 +106,6 @@ class SceneControlOperator(Operator):
 
         # Here I used math to calculate how bright the light should be depending on the direction
         light.energy = max(math.cos(90 - abs(float(rx))), math.cos(90 - abs(float(ry))))
-
-        return
     
     def child_of_control(self, object_name):
         camera = bpy.context.scene.camera
@@ -105,6 +118,18 @@ class SceneControlOperator(Operator):
         for constraint in camera.constraints:
             if constraint.type == 'CHILD_OF':
                 constraint.target = target_object
+
+    def fog_control(self, fog):
+        fog_mat = bpy.data.materials['FogCube']
+        fog_mat.use_nodes = True
+        nodes = fog_mat.node_tree.nodes
+
+        volume_node = nodes.get("Volume Scatter")
+
+        if fog == "True":
+            volume_node.inputs[1].default_value = 0.02 # inputs[1] refers to density
+        else:
+            volume_node.inputs[1].default_value = 0
     
     # ----------------------------------------------------------------------------------------------
 
