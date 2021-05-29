@@ -74,9 +74,16 @@ class SceneControlOperator(Operator):
         camera.location[1] = float(y)
         camera.location[2] = float(z)
         
-        camera.rotation_euler[0] = math.radians(float(rx))
-        camera.rotation_euler[1] = math.radians(float(ry))
-        camera.rotation_euler[2] = math.radians(float(rz))
+        #camera.rotation_euler[0] = math.radians(float(rx))
+        #camera.rotation_euler[1] = math.radians(float(ry))
+        #camera.rotation_euler[2] = math.radians(float(rz))
+        
+        # Instead of taking these inputs, I rotate the camera to look at the object
+        sign = 1
+        if float(y) < 0:
+            sign = 0
+        camera.rotation_euler[0] = math.radians(90 - math.atan(float(z)/math.sqrt(float(x) * float(x) + float(y) * float(y))) / math.pi * 180)
+        camera.rotation_euler[2] = math.radians((math.atan(-float(x)/float(y))/math.pi * 180) + 180 * sign)
 
     # Vehicle density conrol
     def vehicle_density_control(self, traffic_density):
@@ -134,6 +141,17 @@ class SceneControlOperator(Operator):
     # ----------------------------------------------------------------------------------------------
 
 
+class DeleteGeneratedOperator(Operator):
+    """Delete Generated"""
+    bl_idname = "object.delete_generated"
+    bl_label = "Delete generated"
+
+    def execute(self, context):
+        for object in bpy.data.collections['GeneratedObjects'].all_objects:
+            bpy.data.objects.remove(object, do_unlink=True)
+
+        return {'FINISHED'}
+
 
 class FileSettings(bpy.types.PropertyGroup):
     path : bpy.props.StringProperty(name="File path",
@@ -185,12 +203,15 @@ class SceneControlPanel(Panel):
         file_path = bpy.path.abspath("//") + file_tool.path
         print(file_path)
         col.operator(SceneControlOperator.bl_idname, text="Run", icon="TRIA_RIGHT")
-        # layout.seperator()
+        layout.label(text="Scene generation options:")
+        col = layout.column(align=True)
+        col.operator(DeleteGeneratedOperator.bl_idname, text="Delete Generated", icon="TRASH")
 
 
 
 classes = (
     SceneControlOperator,
+    DeleteGeneratedOperator,
     SceneControlPanel,
     FileSettings,
     FileSelector
