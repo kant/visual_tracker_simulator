@@ -30,6 +30,10 @@ class SceneControlOperator(Operator):
 
     def execute(self, context):
         # TODO - change so that it becomes dynamic, currently it is static
+
+        # First I delete all the objects that the program might have generated previously
+        self.delete_generated_controler()
+
         with open(file_path) as f:
             lines = f.readlines()
             
@@ -59,8 +63,16 @@ class SceneControlOperator(Operator):
         elif values[0] == "fog":
             print("Fog control")
             self.fog_control(values[1])
+        elif values[0] == "animation_length":
+            print("Animation length")
+            self.animation_control(values[1])
         else:
             print("Unassigned")
+
+    def delete_generated_controler(self):
+        print("Deleted previously generated objects")
+        for object in bpy.data.collections['GeneratedObjects'].all_objects:
+            bpy.data.objects.remove(object, do_unlink=True)
 
     # ----------------------------------------------------------------------------------------------
     # STUFF THAT CONTROLS THE SCENE
@@ -137,6 +149,12 @@ class SceneControlOperator(Operator):
             volume_node.inputs[1].default_value = 0.02 # inputs[1] refers to density
         else:
             volume_node.inputs[1].default_value = 0
+
+    def animation_control(self, length):
+        animation_length = int(length)
+
+        scene = bpy.context.scene
+        scene.frame_end = animation_length
     
     # ----------------------------------------------------------------------------------------------
 
