@@ -117,14 +117,21 @@ class SceneControlOperator(Operator):
     def light_control(self, rx, ry, rz):
         light = bpy.data.objects['Sun']
 
+        # Setting the angle of the sun
         light.rotation_euler[0] = math.radians(float(rx))
-        light.rotation_euler[1] = math.radians(float(ry))
         light.rotation_euler[2] = math.radians(float(rz))
 
         light = bpy.data.lights['Sun']
 
         # Here I used math to calculate how bright the light should be depending on the direction
-        light.energy = max(math.cos(90 - abs(float(rx))), math.cos(90 - abs(float(ry))))
+        strength = math.cos(abs(float(rx))*math.pi/180)
+        light.energy = strength
+
+        # Setting the strength of HDR to the same value
+        world = bpy.data.worlds['World']
+        world.use_nodes = True
+        surface = world.node_tree.nodes['Background']
+        surface.inputs[1].default_value = strength
     
     def child_of_control(self, object_name):
         camera = bpy.context.scene.camera
@@ -146,7 +153,7 @@ class SceneControlOperator(Operator):
         volume_node = nodes.get("Volume Scatter")
 
         if fog == "True":
-            volume_node.inputs[1].default_value = 0.02 # inputs[1] refers to density
+            volume_node.inputs[1].default_value = 0.01 # inputs[1] refers to density
         else:
             volume_node.inputs[1].default_value = 0
 
