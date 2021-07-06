@@ -10,4 +10,7 @@ First, generate some random scenes by running **generate_sequences.py**. Tell th
 To render the generated scene, open Blender and press **N** on your keyboard to get the sidebar. Click the Visual Tracker Simulator button.\
 Choose your scene file either by opening file explorer or pasting the text file address into the field. Then press run to change your scene according to the file.
 
+### Recommended Blender Version
+2.92.0, not tested on other.
+
 #### Version 0.0.1

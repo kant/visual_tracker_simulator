@@ -6,7 +6,7 @@ bl_info = {
     "name": "Visual Tracker Simulator",
     'author': 'Luka Kuzman',
     "version" : (0, 0, 1),
-    "blender": (2, 80, 0),
+    "blender": (2, 92, 0),
     "location" : "View3D > Sidebar > Edit Tab",
     "description" : "Gets text file with some parameters as an input, export rendered scene and a mask.",
     "category": "Render",
@@ -20,6 +20,7 @@ import bpy
 from bpy.types import (Panel, Operator)
 import math
 import os
+import random
 
 file_path = ""
 
@@ -33,6 +34,9 @@ class SceneControlOperator(Operator):
 
         # First I delete all the objects that the program might have generated previously
         self.delete_generated_controler()
+
+        # Determine which object to follow with a camera randomly
+        self.choose_following_object()
 
         with open(file_path) as f:
             lines = f.readlines()
@@ -50,7 +54,8 @@ class SceneControlOperator(Operator):
             print("Comment")
         elif values[0] == "camera":
             print("Camera control")
-            self.camera_control(values[1], values[2], values[3], values[4], values[5], values[6])
+            # Temporarily disabled, to not move camera from it's path
+            #self.camera_control(values[1], values[2], values[3], values[4], values[5], values[6])
         elif values[0] == "vehicle_density":
             print("Vehicle density")
             self.vehicle_density_control(values[1])
@@ -73,6 +78,24 @@ class SceneControlOperator(Operator):
         print("Deleted previously generated objects")
         for object in bpy.data.collections['GeneratedObjects'].all_objects:
             bpy.data.objects.remove(object, do_unlink=True)
+
+    # Choose following object
+    def choose_following_object(self):
+        number_of_parents = len(bpy.data.collections['CameraParents'].all_objects)
+        choose_random = random.randint(0, number_of_parents)
+
+        camera = bpy.context.scene.camera
+
+        current_object = 0
+        for object in bpy.data.collections['CameraParents'].all_objects:
+            if current_object == choose_random:
+                for constraint in camera.constraints:
+                    if constraint.type == 'FOLLOW_PATH':
+                        constraint.target = object
+                        return
+
+            current_object += 1
+
 
     # ----------------------------------------------------------------------------------------------
     # STUFF THAT CONTROLS THE SCENE
@@ -142,7 +165,7 @@ class SceneControlOperator(Operator):
             target_object = bpy.data.objects[object_name]
 
         for constraint in camera.constraints:
-            if constraint.type == 'CHILD_OF':
+            if constraint.type == 'FOLLOW_PATH':
                 constraint.target = target_object
 
     def fog_control(self, fog):
