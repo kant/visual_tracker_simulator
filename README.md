@@ -9,7 +9,8 @@ There are two ways to install the add-on:
 ## How to use
 First, generate some random scenes by running **generate_sequences.py**. Tell the program how many scenes to generate.\
 To render the generated scene, open Blender and press **N** on your keyboard to get the sidebar. Click the Visual Tracker Simulator button.\
-Choose your scene file either by opening file explorer or pasting the text file address into the field. Then press run to change your scene according to the file.
+Choose your scene file either by opening file explorer or pasting the text file address into the field. Then press run to change your scene according to the file.\
+Masks are rendered using Eevee render engine. Currently, there is no button to do both at once. To render both, first render the scene by pressing render animation. Then go to *Masking* tab and connect the *Image* attribute in the *Blur* node of the chosen mask to *Image* in Viewer node. Make sure you render this scene in Eevee render engine. Press render animation.
 
 ## Version information
 

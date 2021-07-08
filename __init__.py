@@ -222,6 +222,79 @@ class DeleteGeneratedOperator(Operator):
 
         return {'FINISHED'}
 
+class RenderSceneOperator(Operator):
+    """Render Scene"""
+    bl_idname = "object.render_scene"
+    bl_label = "Render scene"
+
+    def execute(self, context):
+        # Render scene
+        # self.render_scene()
+        # Render mask
+        self.render_mask()
+
+        return {'FINISHED'}
+
+    def render_scene(self):
+        bpy.context.scene.use_nodes = True
+        tree = bpy.context.scene.node_tree
+
+        # Clearning default nodes
+        for node in tree.nodes:
+            tree.nodes.remove(node)
+
+        # Create render output node
+        default_render_layer = tree.nodes.new(type='CompositorNodeRLayers')
+        default_render_layer.layer = bpy.context.scene.view_layers[0].name
+        default_render_layer.location = 0,0
+
+        output_node = tree.nodes.new(type='CompositorNodeOutputFile')
+        output_node.location = 400,0
+
+        links = tree.links
+        link = links.new(default_render_layer.outputs[0], output_node.inputs[0])
+
+        bpy.ops.render.render('INVOKE_DEFAULT', animation=True)
+
+    def render_mask(self):
+        # Change render engine to Eevee to render the mask, then change back to default
+        render_engine = bpy.context.scene.render.engine
+        bpy.context.scene.render.engine = 'BLENDER_EEVEE'
+
+        bpy.context.scene.use_nodes = True
+        tree = bpy.context.scene.node_tree
+
+        # Clearning default nodes
+        for node in tree.nodes:
+            tree.nodes.remove(node)
+
+        # Create render output node
+        default_render_layer = tree.nodes.new(type='CompositorNodeRLayers')
+        default_render_layer.layer = bpy.context.scene.view_layers[1].name
+        default_render_layer.location = 0,0
+
+        alpha_over_node = tree.nodes.new(type='CompositorNodeAlphaOver')
+        alpha_over_node.location = 400,0
+
+        links = tree.links
+        link = links.new(default_render_layer.outputs[1], alpha_over_node.inputs[2])
+
+        blur_node = tree.nodes.new(type='CompositorNodeBlur')
+        blur_node.location = 800,0
+
+        links = tree.links
+        link = links.new(alpha_over_node.outputs[0], blur_node.inputs[0])
+
+        output_node = tree.nodes.new(type='CompositorNodeComposite')
+        output_node.location = 1200,0
+
+        links = tree.links
+        link = links.new(blur_node.outputs[0], output_node.inputs[0])
+
+        bpy.ops.render.render('INVOKE_DEFAULT', animation=True)
+        bpy.context.scene.render.engine = render_engine 
+
+
 
 class FileSettings(bpy.types.PropertyGroup):
     path : bpy.props.StringProperty(name="File path",
@@ -276,12 +349,16 @@ class SceneControlPanel(Panel):
         layout.label(text="Scene generation options:")
         col = layout.column(align=True)
         col.operator(DeleteGeneratedOperator.bl_idname, text="Delete Generated", icon="TRASH")
+        layout.label(text="Render scene:")
+        col = layout.column(align=True)
+        col.operator(RenderSceneOperator.bl_idname, text="Render Generated", icon="SEQUENCE")
 
 
 
 classes = (
     SceneControlOperator,
     DeleteGeneratedOperator,
+    RenderSceneOperator,
     SceneControlPanel,
     FileSettings,
     FileSelector
