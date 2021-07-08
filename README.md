@@ -3,7 +3,7 @@ Generates a desired number of scenes to run the tracker on. Then gets a text fil
 
 ## How to instal
 There are two ways to install the add-on:
-1. Download the zip file, unzip it and place the content in the addon folder in the location where you installed Blender.
+1. Download the zip file, unzip it, create a folder called *visual_tracker_simulator", place the _init_ file in it. Move the folder in the add-on folder in the location where you installed Blender.
 2. Download the zip file, open Blender, click _Edit_ and _Preferences_, click _Install_, search for "Visual Tracker Simulator", click _Instal Add-on_ and enable it.
 
 ## How to use
