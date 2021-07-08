@@ -18,7 +18,11 @@ for i in range(number_of_sequences):
     else:
         fog = "False"
 
+    #
     number_of_frames = int(uniform(17, input_number) * 24)
+
+    # Light offset
+    light_offset = int(uniform(0, 800))
 
     # Creating the txt file
     f = open("corvette/scene"+str(i)+".txt", "w")
@@ -29,4 +33,5 @@ for i in range(number_of_sequences):
         f.write("child_of " +  input_following_object + " \n")
     f.write("fog " + fog + " \n")
     f.write("animation_length " + str(number_of_frames) + " \n")
+    f.write("light_offset " + str(light_offset) + " \n")
     f.close()

@@ -1,12 +1,14 @@
 # Kamera
 camera 12.0399 -37.2735 2.24068 66.5 0 154.6 
 # Vozila
-vehicle_density 1 
+generate_density 1 
 # Sonce
 light -1.25594 2.86467 2.86467 0 24.8003 30.2873 
 # Kateremu objektu sledimo
-child_of Chevrolet 
+# child_of Chevrolet 
 # Megla
 fog True 
 # Dolzina animacije
-animation_length 200 
+animation_length 200
+# Premik zacetne svetlobe
+light_offset 0

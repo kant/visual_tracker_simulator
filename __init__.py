@@ -54,8 +54,8 @@ class SceneControlOperator(Operator):
             print("Comment")
         elif values[0] == "camera":
             print("Camera control")
-            # Temporarily disabled, to not move camera from it's path
-            #self.camera_control(values[1], values[2], values[3], values[4], values[5], values[6])
+            # Temporarily disabled, to not move camera from its path that it's following
+            # self.camera_control(values[1], values[2], values[3], values[4], values[5], values[6])
         elif values[0] == "generate_density":
             print("Generated objects density")
             self.generated_density_control(values[1])
@@ -71,6 +71,9 @@ class SceneControlOperator(Operator):
         elif values[0] == "animation_length":
             print("Animation length")
             self.animation_control(values[1])
+        elif values[0] == "light_offset":
+            print("Light offset")
+            self.light_offset_control(values[1])
         else:
             print("Unassigned")
 
@@ -195,6 +198,15 @@ class SceneControlOperator(Operator):
 
         scene = bpy.context.scene
         scene.frame_end = animation_length
+
+    def light_offset_control(self, offset_frames):
+        offset_lenght = int(offset_frames)
+
+        # "Shader NodetreeAction" is the node controlling the intensity of light
+        # TODO - change it so that the offest isn't static
+        bpy.data.actions["Shader NodetreeAction"].fcurves[0].keyframe_points[0].co[0] = -offset_lenght
+        bpy.data.actions["Shader NodetreeAction"].fcurves[0].keyframe_points[1].co[0] = 400 - offset_lenght
+        bpy.data.actions["Shader NodetreeAction"].fcurves[0].keyframe_points[2].co[0] = 800 - offset_lenght
     
     # ----------------------------------------------------------------------------------------------
 
