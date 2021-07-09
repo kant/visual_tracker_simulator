@@ -9,6 +9,6 @@ light -1.25594 2.86467 2.86467 0 24.8003 30.2873
 # Megla
 fog True 
 # Dolzina animacije
-animation_length 10
+animation_length 3
 # Premik zacetne svetlobe
 light_offset 0
