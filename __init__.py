@@ -228,24 +228,48 @@ class DeleteGeneratedOperator(Operator):
 # RENDERING THE SCENE AND ITS MASK
 # ----------------------------------------------------------------------------------------------
 
-original_filepath_render = ""
-render_engine = ""
-
 class RenderSceneOperator(Operator):
     """Render Scene"""
     bl_idname = "object.render_scene"
     bl_label = "Render scene"
     
     def execute(self, context):
-        global original_filepath_render
-        global render_engine
-
-        original_filepath_render = bpy.context.scene.render.filepath
-        
         # Render scene
-        render_scene()
+        self.render_scene()
 
         return {'FINISHED'}
+
+    def render_scene(self):
+        bpy.context.scene.use_nodes = True
+        tree = bpy.context.scene.node_tree
+
+        # Clearning default nodes
+        for node in tree.nodes:
+            tree.nodes.remove(node)
+
+        # Create render output node
+        default_render_layer = tree.nodes.new(type='CompositorNodeRLayers')
+        default_render_layer.layer = bpy.context.scene.view_layers[0].name
+        default_render_layer.location = 0,0
+
+        output_node = tree.nodes.new(type='CompositorNodeOutputFile')
+        output_node.location = 400,0
+
+        links = tree.links
+        link = links.new(default_render_layer.outputs[0], output_node.inputs[0])
+
+        # Render the scene to render folder
+        original_filepath_render = bpy.context.scene.render.filepath
+        bpy.context.scene.render.filepath = original_filepath_render + "\\render\\"
+        print(bpy.context.scene.render.filepath)
+
+        # If the directory does not exist yet, create one
+        if not os.path.exists(bpy.context.scene.render.filepath):
+            os.makedirs(bpy.context.scene.render.filepath)
+
+        bpy.ops.render.render('INVOKE_DEFAULT', animation=True)
+
+        bpy.context.scene.render.filepath = original_filepath_render
 
 class RenderMaskOperator(Operator):
     """Render Mask"""
@@ -253,98 +277,60 @@ class RenderMaskOperator(Operator):
     bl_label = "Render mask"
     
     def execute(self, context):
-        global original_filepath_render
-        global render_engine
-
-        original_filepath_render = bpy.context.scene.render.filepath
-        render_engine = bpy.context.scene.render.engine
-        
-        # Render scene
-        render_mask()
+        # Render mask
+        self.render_mask()
 
         return {'FINISHED'}
 
-def render_scene():
-    bpy.app.handlers.render_complete.append(render_mask)
+    def render_mask(self):
+        # Change render engine to Eevee to render the mask, then change back to default
+        render_engine = bpy.context.scene.render.engine
+        bpy.context.scene.render.engine = 'BLENDER_EEVEE'
 
-    bpy.context.scene.use_nodes = True
-    tree = bpy.context.scene.node_tree
+        bpy.context.scene.use_nodes = True
+        tree = bpy.context.scene.node_tree
 
-    # Clearning default nodes
-    for node in tree.nodes:
-        tree.nodes.remove(node)
+        # Clearning default nodes
+        for node in tree.nodes:
+            tree.nodes.remove(node)
 
-    # Create render output node
-    default_render_layer = tree.nodes.new(type='CompositorNodeRLayers')
-    default_render_layer.layer = bpy.context.scene.view_layers[0].name
-    default_render_layer.location = 0,0
+        # Create render output node
+        default_render_layer = tree.nodes.new(type='CompositorNodeRLayers')
+        default_render_layer.layer = bpy.context.scene.view_layers[1].name
+        default_render_layer.location = 0,0
 
-    output_node = tree.nodes.new(type='CompositorNodeOutputFile')
-    output_node.location = 400,0
+        alpha_over_node = tree.nodes.new(type='CompositorNodeAlphaOver')
+        alpha_over_node.location = 400,0
 
-    links = tree.links
-    link = links.new(default_render_layer.outputs[0], output_node.inputs[0])
+        links = tree.links
+        link = links.new(default_render_layer.outputs[1], alpha_over_node.inputs[2])
 
-    # Render the scene to render folder
-    global original_filepath_render
-    bpy.context.scene.render.filepath = original_filepath_render + "\\render\\"
-    print(bpy.context.scene.render.filepath)
+        blur_node = tree.nodes.new(type='CompositorNodeBlur')
+        blur_node.location = 800,0
 
-    # If the directory does not exist yet, create one
-    if not os.path.exists(bpy.context.scene.render.filepath):
-        os.makedirs(bpy.context.scene.render.filepath)
+        links = tree.links
+        link = links.new(alpha_over_node.outputs[0], blur_node.inputs[0])
 
-    bpy.ops.render.render('INVOKE_DEFAULT', animation=True)
+        output_node = tree.nodes.new(type='CompositorNodeComposite')
+        output_node.location = 1200,0
 
-def render_mask():
-    # Change render engine to Eevee to render the mask, then change back to default
-    bpy.context.scene.render.engine = 'BLENDER_EEVEE'
+        links = tree.links
+        link = links.new(blur_node.outputs[0], output_node.inputs[0])
 
-    bpy.context.scene.use_nodes = True
-    tree = bpy.context.scene.node_tree
+        # Render the mask to mask folder
+        original_filepath_render = bpy.context.scene.render.filepath
+        bpy.context.scene.render.filepath = original_filepath_render + "\\mask\\"
+        print(bpy.context.scene.render.filepath)
 
-    # Clearning default nodes
-    for node in tree.nodes:
-        tree.nodes.remove(node)
+        # If the directory does not exist yet, create one
+        if not os.path.exists(bpy.context.scene.render.filepath):
+            os.makedirs(bpy.context.scene.render.filepath)
 
-    # Create render output node
-    default_render_layer = tree.nodes.new(type='CompositorNodeRLayers')
-    default_render_layer.layer = bpy.context.scene.view_layers[1].name
-    default_render_layer.location = 0,0
+        bpy.ops.render.render('INVOKE_DEFAULT', animation=True)
 
-    alpha_over_node = tree.nodes.new(type='CompositorNodeAlphaOver')
-    alpha_over_node.location = 400,0
-
-    links = tree.links
-    link = links.new(default_render_layer.outputs[1], alpha_over_node.inputs[2])
-
-    blur_node = tree.nodes.new(type='CompositorNodeBlur')
-    blur_node.location = 800,0
-
-    links = tree.links
-    link = links.new(alpha_over_node.outputs[0], blur_node.inputs[0])
-
-    output_node = tree.nodes.new(type='CompositorNodeComposite')
-    output_node.location = 1200,0
-
-    links = tree.links
-    link = links.new(blur_node.outputs[0], output_node.inputs[0])
-
-    # Render the mask to mask folder
-    global original_filepath_render
-    bpy.context.scene.render.filepath = original_filepath_render + "\\mask\\"
-    print(bpy.context.scene.render.filepath)
-
-    # If the directory does not exist yet, create one
-    if not os.path.exists(bpy.context.scene.render.filepath):
-        os.makedirs(bpy.context.scene.render.filepath)
-
-    bpy.ops.render.render('INVOKE_DEFAULT', animation=True)
-
-    # Return to values that these variables were before this function call
-    global render_engine
-    bpy.context.scene.render.filepath = original_filepath_render
-    bpy.context.scene.render.engine = render_engine
+        # Return to values that these variables were before this function call
+        bpy.context.scene.render.filepath = original_filepath_render
+        bpy.context.scene.render.engine = render_engine
 
 # ----------------------------------------------------------------------------------------------
 
