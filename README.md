@@ -19,4 +19,9 @@ TODO
 ### Recommended Blender Version
 2.92.0, not guaranteed to work on other versions.
 
+### Known bugs
+* When clicking on delete generated with one of the generated objects selected, the add-on will disappear from the view menu.
+
 #### Version 0.1.0
+
+###
