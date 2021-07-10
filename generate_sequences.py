@@ -1,4 +1,12 @@
+import os
 from random import uniform, randrange
+
+print("Name the folder in which to put generated files.")
+folder_name = str(input())
+if folder_name == "":
+    folder_name = "generated"
+if not os.path.exists(folder_name):
+    os.mkdir(folder_name)
 
 print("How many sequences do you want to generate?")
 number_of_sequences = int(input())
@@ -25,7 +33,7 @@ for i in range(number_of_sequences):
     light_offset = int(uniform(0, 800))
 
     # Creating the txt file
-    f = open("corvette/scene"+str(i)+".txt", "w")
+    f = open(folder_name + "/scene"+str(i)+".txt", "w")
     f.write("camera " + str(uniform(-10,10)) + " " + str(uniform(-10,10)) + " " + str(uniform(1,10)) + " " + str(uniform(0,180)) + " " + str(0) + " " + str(uniform(-180,180)) +  " \n")
     f.write("generate_density " + str(int(uniform(0,10))) + " \n")
     f.write("light " + str(uniform(0,90)) + " " + str(uniform(-90,90)) + " " + str(uniform(-180,180)) + " \n")
