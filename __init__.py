@@ -149,6 +149,20 @@ class SceneControlOperator(Operator):
                     offset = int((i + 1)*300/(int(generate_density)+1))
                     print(offset)
 
+                    # Setting which path the object should follow
+                    number_of_paths = len(bpy.data.collections['FollowingPaths'].all_objects)
+                    choose_random_path = random.randint(0, number_of_paths - 1)
+
+                    current_path = 0
+                    for path in bpy.data.collections['FollowingPaths'].all_objects:
+                        if current_path == choose_random_path:
+                            for constraint in generated_object.constraints:
+                                if constraint.type == 'FOLLOW_PATH':
+                                    constraint.target = path
+
+                        current_path += 1
+
+                    # Adjusting the path data
                     generated_object.animation_data.action.fcurves[0].keyframe_points[0].co[0] = generated_object.animation_data.action.fcurves[0].keyframe_points[0].co[0] - offset
                     generated_object.animation_data.action.fcurves[0].keyframe_points[1].co[0] = generated_object.animation_data.action.fcurves[0].keyframe_points[1].co[0] - offset
 
