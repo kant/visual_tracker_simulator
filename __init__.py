@@ -5,7 +5,7 @@
 bl_info = {
     "name": "Visual Tracker Simulator",
     'author': 'Luka Kuzman',
-    "version" : (0, 0, 1),
+    "version" : (0, 1, 0),
     "blender": (2, 92, 0),
     "location" : "View3D > Sidebar > Edit Tab",
     "description" : "Gets text file with some parameters as an input, export rendered scene and a mask.",
@@ -31,13 +31,12 @@ class SceneControlOperator(Operator):
     bl_label = "Scene control"
 
     def execute(self, context):
-        # TODO - change so that it becomes dynamic, currently it is static
-
-        # First I delete all the objects that the program might have generated previously
+        # Delete all the objects that the program might have generated previously
         self.delete_generated_controler()
 
         # Determine which object to follow with a camera randomly
         self.choose_following_object()
+
 
         with open(file_path) as f:
             lines = f.readlines()
@@ -106,6 +105,7 @@ class SceneControlOperator(Operator):
     # ----------------------------------------------------------------------------------------------
 
     # Camera control
+    # Currently not used
     def camera_control(self, x, y, z, rx, ry, rz):
         camera = bpy.context.scene.camera
         
@@ -125,7 +125,7 @@ class SceneControlOperator(Operator):
         camera.rotation_euler[2] = math.radians((math.atan(-float(x)/float(y))/math.pi * 180) + 180 * sign)
 
     # Vehicle density conrol
-    def generated_density_control(self, traffic_density):
+    def generated_density_control(self, generate_density):
         # First delete all the stuff that was previously there
         for object in bpy.data.collections['GeneratedObjects'].all_objects:
             bpy.data.objects.remove(object, do_unlink=True)
@@ -133,24 +133,36 @@ class SceneControlOperator(Operator):
         layer_collection = bpy.data.collections['GeneratedObjects']
 
         # Duplicate cars as given by the txt file
-        for i in range(int(traffic_density)):
+        for i in range(int(generate_density)):
             # Choose random object to duplicate
-            choose_random = random.randint(0, len(bpy.data.collections['GeneratingObjects'].all_objects))
+            choose_random = random.randint(0, len(bpy.data.collections['GeneratingObjects'].all_objects) - 1)
             index = 0
 
             for object in bpy.data.collections['GeneratingObjects'].all_objects:
                 if index == choose_random: 
-                    car = object.copy()
+                    generated_object = object.copy()
 
-                    action = car.animation_data.action
-                    car.animation_data.action = action.copy()
+                    action = generated_object.animation_data.action
+                    generated_object.animation_data.action = action.copy()
 
-                    car.animation_data.action = None
+                    # TODO change the hardcoded 300
+                    offset = int((i + 1)*300/(int(generate_density)+1))
+                    print(offset)
 
-                    layer_collection.objects.link(car)
-                else:
-                    index += 1
+                    generated_object.animation_data.action.fcurves[0].keyframe_points[0].co[0] = generated_object.animation_data.action.fcurves[0].keyframe_points[0].co[0] - offset
+                    generated_object.animation_data.action.fcurves[0].keyframe_points[1].co[0] = generated_object.animation_data.action.fcurves[0].keyframe_points[1].co[0] - offset
 
+                    fc = generated_object.animation_data.action.fcurves[0]
+
+                    for mod in fc.modifiers:
+                        fc.modifiers.remove(mod)
+
+                    fc.modifiers.new(type='CYCLES')
+
+                    layer_collection.objects.link(generated_object)
+                index += 1
+
+    # Currently not used
     def light_control(self, rx, ry, rz):
         light = bpy.data.objects['Sun']
 
@@ -252,24 +264,13 @@ class RenderSceneOperator(Operator):
         default_render_layer.layer = bpy.context.scene.view_layers[0].name
         default_render_layer.location = 0,0
 
-        output_node = tree.nodes.new(type='CompositorNodeOutputFile')
+        output_node = tree.nodes.new(type='CompositorNodeComposite')
         output_node.location = 400,0
 
         links = tree.links
         link = links.new(default_render_layer.outputs[0], output_node.inputs[0])
 
-        # Render the scene to render folder
-        original_filepath_render = bpy.context.scene.render.filepath
-        bpy.context.scene.render.filepath = original_filepath_render + "\\render\\"
-        print(bpy.context.scene.render.filepath)
-
-        # If the directory does not exist yet, create one
-        if not os.path.exists(bpy.context.scene.render.filepath):
-            os.makedirs(bpy.context.scene.render.filepath)
-
         bpy.ops.render.render('INVOKE_DEFAULT', animation=True)
-
-        bpy.context.scene.render.filepath = original_filepath_render
 
 class RenderMaskOperator(Operator):
     """Render Mask"""
@@ -283,8 +284,7 @@ class RenderMaskOperator(Operator):
         return {'FINISHED'}
 
     def render_mask(self):
-        # Change render engine to Eevee to render the mask, then change back to default
-        render_engine = bpy.context.scene.render.engine
+        # Change render engine to Eevee to render the mask
         bpy.context.scene.render.engine = 'BLENDER_EEVEE'
 
         bpy.context.scene.use_nodes = True
@@ -317,20 +317,7 @@ class RenderMaskOperator(Operator):
         links = tree.links
         link = links.new(blur_node.outputs[0], output_node.inputs[0])
 
-        # Render the mask to mask folder
-        original_filepath_render = bpy.context.scene.render.filepath
-        bpy.context.scene.render.filepath = original_filepath_render + "\\mask\\"
-        print(bpy.context.scene.render.filepath)
-
-        # If the directory does not exist yet, create one
-        if not os.path.exists(bpy.context.scene.render.filepath):
-            os.makedirs(bpy.context.scene.render.filepath)
-
         bpy.ops.render.render('INVOKE_DEFAULT', animation=True)
-
-        # Return to values that these variables were before this function call
-        bpy.context.scene.render.filepath = original_filepath_render
-        bpy.context.scene.render.engine = render_engine
 
 # ----------------------------------------------------------------------------------------------
 
@@ -383,7 +370,7 @@ class SceneControlPanel(Panel):
         col.prop(file_tool, "path")
         file_path = bpy.path.abspath("//") + file_tool.path
         # print(file_path)
-        col.operator(SceneControlOperator.bl_idname, text="Run", icon="TRIA_RIGHT")
+        col.operator(SceneControlOperator.bl_idname, text="Load", icon="TRIA_RIGHT")
         layout.label(text="Scene generation options:")
         col = layout.column(align=True)
         col.operator(DeleteGeneratedOperator.bl_idname, text="Delete Generated", icon="TRASH")
