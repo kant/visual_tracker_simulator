@@ -12,7 +12,7 @@ Choose your scene file either by opening file explorer or pasting the text file 
 To render a scene and a mask, use *Render Scene* and *Render Mask* buttons respectivelly. Since masks are rendered using *Eevee* engine, make sure to switch to Cycles render engine once mask rendering is finished, should you desire that.
 
 ## Creating your own scenes
-The name of the path should contain the name of the layer/object you're following.
+The name of the path should contain the name of the layer/object you're following. Make sure only that object has such a name (layer and object names should be the same, and only them). The following path should be cyclic, to prevent the path jumping from one point to another.
 
 ## Version information
 
@@ -20,7 +20,7 @@ The name of the path should contain the name of the layer/object you're followin
 2.92.0, not guaranteed to work on other versions.
 
 ### Known issues
-* When clicking on delete generated with one of the generated objects selected, the add-on will disappear from the sidebar. In such case, just click anywhere on the sidebar and it should reappear.
+* When clicking on delete generated with one of the generated objects selected, the add-on will disappear from the sidebar. In such case, just click anywhere (or anywhere on the sidebar) and it should reappear.
 
 #### Version 0.1.0
 

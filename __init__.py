@@ -99,6 +99,13 @@ class SceneControlOperator(Operator):
 
         camera = bpy.context.scene.camera
 
+        # Make the followed object the center of the camera
+        for object in bpy.data.collections['MainObjects'].all_objects:
+            if masked_object_name == object.name:
+                for constraint in camera.constraints:
+                    if constraint.type == 'TRACK_TO':
+                        constraint.target = object
+
         # Choose the path at random out of those
         current_object = 0
         for object in bpy.data.collections['CameraParents'].all_objects:
@@ -110,6 +117,7 @@ class SceneControlOperator(Operator):
                             return
 
                 current_object += 1
+
 
 
     # ----------------------------------------------------------------------------------------------
