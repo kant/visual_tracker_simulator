@@ -24,6 +24,7 @@ import random
 from bpy.props import StringProperty, BoolProperty
 
 file_path = ""
+masked_object = 1
 
 class SceneControlOperator(Operator):
     """Scene Control"""
@@ -36,7 +37,6 @@ class SceneControlOperator(Operator):
 
         # Determine which object to follow with a camera randomly
         self.choose_following_object()
-
 
         with open(file_path) as f:
             lines = f.readlines()
@@ -84,20 +84,32 @@ class SceneControlOperator(Operator):
 
     # Choose following object
     def choose_following_object(self):
-        number_of_parents = len(bpy.data.collections['CameraParents'].all_objects)
-        choose_random = random.randint(0, number_of_parents)
+        global masked_object
+        masked_object = random.randint(1, len(bpy.context.scene.view_layers) - 1)
+
+        masked_object_name = bpy.context.scene.view_layers[masked_object].name
+
+        # Count how many paths the object has
+        number_of_paths = 0
+        for object in bpy.data.collections['CameraParents'].all_objects:
+            if masked_object_name in object.name:
+                number_of_paths += 1
+
+        choose_random = random.randint(0, number_of_paths - 1)
 
         camera = bpy.context.scene.camera
 
+        # Choose the path at random out of those
         current_object = 0
         for object in bpy.data.collections['CameraParents'].all_objects:
-            if current_object == choose_random:
-                for constraint in camera.constraints:
-                    if constraint.type == 'FOLLOW_PATH':
-                        constraint.target = object
-                        return
+            if masked_object_name in object.name:
+                if current_object == choose_random:
+                    for constraint in camera.constraints:
+                        if constraint.type == 'FOLLOW_PATH':
+                            constraint.target = object
+                            return
 
-            current_object += 1
+                current_object += 1
 
 
     # ----------------------------------------------------------------------------------------------
@@ -234,6 +246,13 @@ class SceneControlOperator(Operator):
         bpy.data.actions["Shader NodetreeAction"].fcurves[0].keyframe_points[0].co[0] = -offset_lenght
         bpy.data.actions["Shader NodetreeAction"].fcurves[0].keyframe_points[1].co[0] = 400 - offset_lenght
         bpy.data.actions["Shader NodetreeAction"].fcurves[0].keyframe_points[2].co[0] = 800 - offset_lenght
+
+        fc = bpy.data.actions["Shader NodetreeAction"].fcurves[0]
+
+        for mod in fc.modifiers:
+            fc.modifiers.remove(mod)
+
+        fc.modifiers.new(type='CYCLES')
     
     # ----------------------------------------------------------------------------------------------
 
@@ -310,7 +329,8 @@ class RenderMaskOperator(Operator):
 
         # Create render output node
         default_render_layer = tree.nodes.new(type='CompositorNodeRLayers')
-        default_render_layer.layer = bpy.context.scene.view_layers[1].name
+        global masked_object
+        default_render_layer.layer = bpy.context.scene.view_layers[masked_object].name
         default_render_layer.location = 0,0
 
         alpha_over_node = tree.nodes.new(type='CompositorNodeAlphaOver')

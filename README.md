@@ -12,7 +12,7 @@ Choose your scene file either by opening file explorer or pasting the text file 
 To render a scene and a mask, use *Render Scene* and *Render Mask* buttons respectivelly. Since masks are rendered using *Eevee* engine, make sure to switch to Cycles render engine once mask rendering is finished, should you desire that.
 
 ## Creating your own scenes
-TODO
+The name of the path should contain the name of the layer/object you're following.
 
 ## Version information
 
