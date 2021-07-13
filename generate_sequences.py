@@ -11,7 +11,7 @@ if not os.path.exists(folder_name):
 print("How many sequences do you want to generate?")
 number_of_sequences = int(input())
 
-print("How long at most do you want your sequences to be (in seconds)? Minimum is 17s.");
+print("How long at most do you want your sequences to be (in seconds)?");
 input_number = float(input())
 if input_number < 17:
     input_number = 17
@@ -27,7 +27,7 @@ for i in range(number_of_sequences):
         fog = "False"
 
     #
-    number_of_frames = int(uniform(17, input_number) * 24)
+    number_of_frames = int(uniform(1, input_number) * 24)
 
     # Light offset
     light_offset = int(uniform(0, 800))
