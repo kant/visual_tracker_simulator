@@ -5,7 +5,7 @@
 bl_info = {
     "name": "Visual Tracker Simulator",
     'author': 'Luka Kuzman',
-    "version" : (0, 1, 0),
+    "version" : (0, 2, 0),
     "blender": (2, 92, 0),
     "location" : "View3D > Sidebar > Edit Tab",
     "description" : "Gets text file with some parameters as an input, export rendered scene and a mask.",
@@ -13,7 +13,13 @@ bl_info = {
 }
 
 # --------------------------------------------------------------------------------
-# CODE
+# RANDOMIZATION OF PARAMETERS FILES
+# --------------------------------------------------------------------------------
+
+# TODO
+
+# --------------------------------------------------------------------------------
+# LOADING PARAMETERS FROM FILES
 # --------------------------------------------------------------------------------
 
 import bpy
@@ -54,8 +60,7 @@ class SceneControlOperator(Operator):
             print("Comment")
         elif values[0] == "camera":
             print("Camera control")
-            # Temporarily disabled, to not move camera from its path that it's following
-            # self.camera_control(values[1], values[2], values[3], values[4], values[5], values[6])
+            self.camera_control(values[1], values[2], values[3], values[4], values[5], values[6])
         elif values[0] == "generate_density":
             print("Generated objects density")
             self.generated_density_control(values[1])
@@ -125,34 +130,23 @@ class SceneControlOperator(Operator):
     # ----------------------------------------------------------------------------------------------
 
     # Camera control
-    # Currently not used
     def camera_control(self, x, y, z, rx, ry, rz):
         camera = bpy.context.scene.camera
         
+        # Move the camera from the path by a certain ammount
         camera.location[0] = float(x)
         camera.location[1] = float(y)
         camera.location[2] = float(z)
-        
-        #camera.rotation_euler[0] = math.radians(float(rx))
-        #camera.rotation_euler[1] = math.radians(float(ry))
-        #camera.rotation_euler[2] = math.radians(float(rz))
-        
-        # Instead of taking these inputs, I rotate the camera to look at the object
-        sign = 1
-        if float(y) < 0:
-            sign = 0
-        camera.rotation_euler[0] = math.radians(90 - math.atan(float(z)/math.sqrt(float(x) * float(x) + float(y) * float(y))) / math.pi * 180)
-        camera.rotation_euler[2] = math.radians((math.atan(-float(x)/float(y))/math.pi * 180) + 180 * sign)
 
-    # Vehicle density conrol
+    # Object density conrol
     def generated_density_control(self, generate_density):
-        # First delete all the stuff that was previously there
+        # First delete all the objects that were previously there
         for object in bpy.data.collections['GeneratedObjects'].all_objects:
             bpy.data.objects.remove(object, do_unlink=True)
 
         layer_collection = bpy.data.collections['GeneratedObjects']
 
-        # Duplicate cars as given by the txt file
+        # Duplicate objects as given by the txt file
         for i in range(int(generate_density)):
             # Choose random object to duplicate
             choose_random = random.randint(0, len(bpy.data.collections['GeneratingObjects'].all_objects) - 1)
@@ -165,8 +159,8 @@ class SceneControlOperator(Operator):
                     action = generated_object.animation_data.action
                     generated_object.animation_data.action = action.copy()
 
-                    # TODO change the hardcoded 300
-                    offset = int((i + 1)*300/(int(generate_density)+1))
+                    generated_animation_legth = generated_object.animation_data.action.fcurves[0].keyframe_points[1].co[0] - generated_object.animation_data.action.fcurves[0].keyframe_points[0].co[0]
+                    offset = int((i + 1)*generated_animation_legth/(int(generate_density)+1))
                     print(offset)
 
                     # Setting which path the object should follow
@@ -196,7 +190,7 @@ class SceneControlOperator(Operator):
                     layer_collection.objects.link(generated_object)
                 index += 1
 
-    # Currently not used
+    # TODO - Currently not used
     def light_control(self, rx, ry, rz):
         light = bpy.data.objects['Sun']
 
@@ -244,16 +238,22 @@ class SceneControlOperator(Operator):
         animation_length = int(length)
 
         scene = bpy.context.scene
-        scene.frame_end = animation_length
+
+        random_start = int(random.uniform(0, animation_length))
+        scene.frame_start = random_start
+        scene.frame_end = random_start + animation_length
 
     def light_offset_control(self, offset_frames):
         offset_lenght = int(offset_frames)
 
         # "Shader NodetreeAction" is the node controlling the intensity of light
-        # TODO - change it so that the offest isn't static
+        # Make sure that the action controling it is named so
+        light_cycle_length = bpy.data.actions["Shader NodetreeAction"].fcurves[0].keyframe_points[2].co[0] - bpy.data.actions["Shader NodetreeAction"].fcurves[0].keyframe_points[0].co[0]
+
+        # Move the keyframes acordingly
         bpy.data.actions["Shader NodetreeAction"].fcurves[0].keyframe_points[0].co[0] = -offset_lenght
-        bpy.data.actions["Shader NodetreeAction"].fcurves[0].keyframe_points[1].co[0] = 400 - offset_lenght
-        bpy.data.actions["Shader NodetreeAction"].fcurves[0].keyframe_points[2].co[0] = 800 - offset_lenght
+        bpy.data.actions["Shader NodetreeAction"].fcurves[0].keyframe_points[1].co[0] = light_cycle_length / 2 - offset_lenght
+        bpy.data.actions["Shader NodetreeAction"].fcurves[0].keyframe_points[2].co[0] = light_cycle_length - offset_lenght
 
         fc = bpy.data.actions["Shader NodetreeAction"].fcurves[0]
 
@@ -362,6 +362,8 @@ class RenderMaskOperator(Operator):
         bpy.ops.render.render('INVOKE_DEFAULT', animation=True)
 
 # ----------------------------------------------------------------------------------------------
+# FILE LOADING
+# ----------------------------------------------------------------------------------------------
 
 class FileSettings(bpy.types.PropertyGroup):
     path : bpy.props.StringProperty(name="File path",
@@ -411,7 +413,6 @@ class SceneControlPanel(Panel):
         file_tool = context.scene.file_tool
         col.prop(file_tool, "path")
         file_path = bpy.path.abspath("//") + file_tool.path
-        # print(file_path)
         col.operator(SceneControlOperator.bl_idname, text="Load", icon="TRIA_RIGHT")
         layout.label(text="Scene generation options:")
         col = layout.column(align=True)

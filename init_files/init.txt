@@ -1,4 +1,4 @@
-camera 12.0399 -37.2735 2.24068 66.5 0 154.6 
+camera 1 1 1
 generate_density 2 
 light -1.25594 2.86467 2.86467 0 24.8003 30.2873 
 fog True 
