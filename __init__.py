@@ -25,18 +25,22 @@ from bpy.props import (StringProperty, BoolProperty, IntProperty, FloatProperty)
 
 file_path = ""
 masked_object = 1
+camera_distance = 5
+following_object = ""
+generated_density = 5
+
 
 class RandomizationProperties(PropertyGroup):
-    generated_density: IntProperty(
-        name = "Generated density",
-        description="Generated density:",
+    camera_distance: FloatProperty(
+        name = "Camera distance",
+        description = "Camera distance",
         default = 5,
         min = 0
         )
 
-    camera_distance: FloatProperty(
-        name = "Camera distance",
-        description = "Camera distance",
+    generated_density: IntProperty(
+        name = "Generated density",
+        description="Generated density:",
         default = 5,
         min = 0
         )
@@ -52,7 +56,6 @@ class RandomizationProperties(PropertyGroup):
 # RANDOMIZATION OF PARAMETERS FILES
 # --------------------------------------------------------------------------------
 
-# TODO
 class RandomizeControlOperator(Operator):
     """Randomize Control"""
     bl_idname = "object.randomize_control"
@@ -68,7 +71,6 @@ class RandomizeControlOperator(Operator):
         # Randomize parameters
         self.camera_control()
         self.generated_density_control()
-        self.child_of_control()
         self.fog_control()
         self.animation_control()
         self.light_offset_control()
@@ -84,6 +86,9 @@ class RandomizeControlOperator(Operator):
     def choose_following_object(self):
         global masked_object
         masked_object = random.randint(1, len(bpy.context.scene.view_layers) - 1)
+
+        # Check if the user has chosen a particular object to follow
+        object_to_follow = masked_object
 
         masked_object_name = bpy.context.scene.view_layers[masked_object].name
 
@@ -124,10 +129,12 @@ class RandomizeControlOperator(Operator):
     def camera_control(self):
         camera = bpy.context.scene.camera
 
-        # TODO - changed hardcoded values
-        max_dist_x = 10
-        max_dist_y = 10
-        max_dist_z = 10
+        global camera_distance
+        max_dist = camera_distance
+
+        max_dist_x = max_dist
+        max_dist_y = max_dist
+        max_dist_z = max_dist
         
         # Move the camera from the path by a certain ammount
         camera.location[0] = float(random.uniform(-max_dist_x, max_dist_x))
@@ -136,8 +143,8 @@ class RandomizeControlOperator(Operator):
 
     # Object density conrol
     def generated_density_control(self):
-        # TODO - change hardcoded value
-        max_density = 10
+        global generated_density
+        max_density = generated_density
         generate_density = random.uniform(0, max_density)
 
         # First delete all the objects that were previously there
@@ -189,29 +196,6 @@ class RandomizeControlOperator(Operator):
 
                     layer_collection.objects.link(generated_object)
                 index += 1
-
-    def child_of_control(self):
-        camera = bpy.context.scene.camera
-
-        following_objects = ["_none_"]
-
-        for collection in bpy.data.collections:
-            if collection.name == "MainObjects":
-                for i in range(0, len(collection.children)):
-                    following_objects.append(collection.children[i].name)
-        
-        random_index = int(random.uniform(0, len(following_objects)))
-
-        object_name = following_objects[random_index]
-
-        if(object_name == "_none_"):
-            target_object = None
-        else:
-            target_object = bpy.data.objects[object_name]
-
-        for constraint in camera.constraints:
-            if constraint.type == 'FOLLOW_PATH':
-                constraint.target = target_object
 
     def fog_control(self):
         fog_mat = bpy.data.materials['FogCube']
@@ -639,6 +623,9 @@ class SceneControlPanel(Panel):
 
     def draw(self, context):
         global file_path
+        global camera_distance
+        global following_object
+        global generated_density
         
         layout = self.layout
         layout.label(text="Random scene generate:")
@@ -646,10 +633,14 @@ class SceneControlPanel(Panel):
         col.operator(RandomizeControlOperator.bl_idname, text="Randomize", icon="PLAY")
         layout.label(text="Randomization parameters limits:")
 
-        randomizer_tool = context.scene.my_tool
+        randomizer_tool = context.scene.randomizer_tool
         layout.prop(randomizer_tool, "camera_distance")
         layout.prop(randomizer_tool, "following_object")
         layout.prop(randomizer_tool, "generated_density")
+        
+        camera_distance = randomizer_tool.camera_distance
+        following_object = randomizer_tool.following_object
+        generated_density = randomizer_tool.generated_density
 
 
         layout.label(text="Generate from file:")
@@ -690,14 +681,14 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     bpy.types.Scene.file_tool = bpy.props.PointerProperty(type=FileSettings)
-    bpy.types.Scene.my_tool = bpy.props.PointerProperty(type=RandomizationProperties)
+    bpy.types.Scene.randomizer_tool = bpy.props.PointerProperty(type=RandomizationProperties)
 
 
 def unregister():
     for cls in classes:
         bpy.utils.unregister_class(cls)
     del bpy.types.Scene.file_tool
-    del bpy.types.Scene.my_tool
+    del bpy.types.Scene.randomizer_tool
 
 if __name__ == "__main__":
     register()
