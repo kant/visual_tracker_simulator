@@ -17,14 +17,36 @@ bl_info = {
 # --------------------------------------------------------------------------------
 
 import bpy
-from bpy.types import (Panel, Operator)
 import math
 import os
 import random
-from bpy.props import StringProperty, BoolProperty
+from bpy.types import (Panel, Operator, PropertyGroup)
+from bpy.props import (StringProperty, BoolProperty, IntProperty, FloatProperty)
 
 file_path = ""
 masked_object = 1
+
+class RandomizationProperties(PropertyGroup):
+    generated_density: IntProperty(
+        name = "Generated density",
+        description="Generated density:",
+        default = 5,
+        min = 0
+        )
+
+    camera_distance: FloatProperty(
+        name = "Camera distance",
+        description = "Camera distance",
+        default = 5,
+        min = 0
+        )
+    
+    following_object: StringProperty(
+        name = "Object to follow",
+        description=":",
+        default="",
+        maxlen=1024
+        )
 
 # --------------------------------------------------------------------------------
 # RANDOMIZATION OF PARAMETERS FILES
@@ -45,7 +67,6 @@ class RandomizeControlOperator(Operator):
 
         # Randomize parameters
         self.camera_control()
-        self.generated_density_control()
         self.generated_density_control()
         self.child_of_control()
         self.fog_control()
@@ -623,15 +644,25 @@ class SceneControlPanel(Panel):
         layout.label(text="Random scene generate:")
         col = layout.column(align=True)
         col.operator(RandomizeControlOperator.bl_idname, text="Randomize", icon="PLAY")
+        layout.label(text="Randomization parameters limits:")
+
+        randomizer_tool = context.scene.my_tool
+        layout.prop(randomizer_tool, "camera_distance")
+        layout.prop(randomizer_tool, "following_object")
+        layout.prop(randomizer_tool, "generated_density")
+
+
         layout.label(text="Generate from file:")
         col = layout.column(align=True)
         file_tool = context.scene.file_tool
         col.prop(file_tool, "path")
         file_path = bpy.path.abspath("//") + file_tool.path
         col.operator(SceneControlOperator.bl_idname, text="Load", icon="PLAY")
+
         layout.label(text="Scene generation options:")
         col = layout.column(align=True)
         col.operator(DeleteGeneratedOperator.bl_idname, text="Delete Generated", icon="TRASH")
+
         layout.label(text="Render scene:")
         col = layout.column(align=True)
         col.operator(RenderSceneOperator.bl_idname, text="Render Scene", icon="SEQUENCE")
@@ -641,6 +672,7 @@ class SceneControlPanel(Panel):
 
 classes = (
     RandomizeControlOperator,
+    RandomizationProperties,
     SceneControlOperator,
     DeleteGeneratedOperator,
     RenderSceneOperator,
@@ -658,12 +690,14 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     bpy.types.Scene.file_tool = bpy.props.PointerProperty(type=FileSettings)
+    bpy.types.Scene.my_tool = bpy.props.PointerProperty(type=RandomizationProperties)
 
 
 def unregister():
     for cls in classes:
         bpy.utils.unregister_class(cls)
     del bpy.types.Scene.file_tool
+    del bpy.types.Scene.my_tool
 
 if __name__ == "__main__":
     register()
