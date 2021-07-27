@@ -13,13 +13,27 @@ bl_info = {
 }
 
 # --------------------------------------------------------------------------------
+# IMPORTS AND GLOBAL VARIABLES
+# --------------------------------------------------------------------------------
+
+import bpy
+from bpy.types import (Panel, Operator)
+import math
+import os
+import random
+from bpy.props import StringProperty, BoolProperty
+
+file_path = ""
+masked_object = 1
+
+# --------------------------------------------------------------------------------
 # RANDOMIZATION OF PARAMETERS FILES
 # --------------------------------------------------------------------------------
 
 # TODO
 class RandomizeControlOperator(Operator):
     """Randomize Control"""
-    bl_idname = "object.Randomize_control"
+    bl_idname = "object.randomize_control"
     bl_label = "Randomize control"
 
     def execute(self, context):
@@ -33,7 +47,6 @@ class RandomizeControlOperator(Operator):
         self.camera_control()
         self.generated_density_control()
         self.generated_density_control()
-        self.light_control()
         self.child_of_control()
         self.fog_control()
         self.animation_control()
@@ -159,6 +172,17 @@ class RandomizeControlOperator(Operator):
     def child_of_control(self):
         camera = bpy.context.scene.camera
 
+        following_objects = ["_none_"]
+
+        for collection in bpy.data.collections:
+            if collection.name == "MainObjects":
+                for i in range(0, len(collection.children)):
+                    following_objects.append(collection.children[i].name)
+        
+        random_index = int(random.uniform(0, len(following_objects)))
+
+        object_name = following_objects[random_index]
+
         if(object_name == "_none_"):
             target_object = None
         else:
@@ -220,16 +244,6 @@ class RandomizeControlOperator(Operator):
 # --------------------------------------------------------------------------------
 # LOADING PARAMETERS FROM FILES
 # --------------------------------------------------------------------------------
-
-import bpy
-from bpy.types import (Panel, Operator)
-import math
-import os
-import random
-from bpy.props import StringProperty, BoolProperty
-
-file_path = ""
-masked_object = 1
 
 class SceneControlOperator(Operator):
     """Scene Control"""
@@ -608,7 +622,7 @@ class SceneControlPanel(Panel):
         layout = self.layout
         layout.label(text="Random scene generate:")
         col = layout.column(align=True)
-        col.operator(SceneControlOperator.bl_idname, text="Randomize", icon="PLAY")
+        col.operator(RandomizeControlOperator.bl_idname, text="Randomize", icon="PLAY")
         layout.label(text="Generate from file:")
         col = layout.column(align=True)
         file_tool = context.scene.file_tool
