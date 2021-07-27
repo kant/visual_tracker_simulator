@@ -5,7 +5,7 @@
 bl_info = {
     "name": "Visual Tracker Simulator",
     'author': 'Luka Kuzman',
-    "version" : (0, 2, 0),
+    "version" : (0, 2, 1),
     "blender": (2, 92, 0),
     "location" : "View3D > Sidebar > Edit Tab",
     "description" : "Gets text file with some parameters as an input, export rendered scene and a mask.",
@@ -17,6 +17,205 @@ bl_info = {
 # --------------------------------------------------------------------------------
 
 # TODO
+class RandomizeControlOperator(Operator):
+    """Randomize Control"""
+    bl_idname = "object.Randomize_control"
+    bl_label = "Randomize control"
+
+    def execute(self, context):
+        # Delete all the objects that the program might have generated previously
+        self.delete_generated_controler()
+
+        # Determine which object to follow with a camera randomly
+        self.choose_following_object()
+
+        # Randomize parameters
+        self.camera_control()
+        self.generated_density_control()
+        self.generated_density_control()
+        self.light_control()
+        self.child_of_control()
+        self.fog_control()
+        self.animation_control()
+        self.light_offset_control()
+
+        return {'FINISHED'}
+
+    def delete_generated_controler(self):
+        print("Deleted previously generated objects")
+        for object in bpy.data.collections['GeneratedObjects'].all_objects:
+            bpy.data.objects.remove(object, do_unlink=True)
+
+    # Choose following object
+    def choose_following_object(self):
+        global masked_object
+        masked_object = random.randint(1, len(bpy.context.scene.view_layers) - 1)
+
+        masked_object_name = bpy.context.scene.view_layers[masked_object].name
+
+        # Count how many paths the object has
+        number_of_paths = 0
+        for object in bpy.data.collections['CameraParents'].all_objects:
+            if masked_object_name in object.name:
+                number_of_paths += 1
+
+        choose_random = random.randint(0, number_of_paths - 1)
+
+        camera = bpy.context.scene.camera
+
+        # Make the followed object the center of the camera
+        for object in bpy.data.collections['MainObjects'].all_objects:
+            if masked_object_name == object.name:
+                for constraint in camera.constraints:
+                    if constraint.type == 'TRACK_TO':
+                        constraint.target = object
+
+        # Choose the path at random out of those
+        current_object = 0
+        for object in bpy.data.collections['CameraParents'].all_objects:
+            if masked_object_name in object.name:
+                if current_object == choose_random:
+                    for constraint in camera.constraints:
+                        if constraint.type == 'FOLLOW_PATH':
+                            constraint.target = object
+                            return
+
+                current_object += 1
+
+    # ----------------------------------------------------------------------------------------------
+    # STUFF THAT CONTROLS THE SCENE
+    # ----------------------------------------------------------------------------------------------
+
+    # Camera control
+    def camera_control(self):
+        camera = bpy.context.scene.camera
+
+        # TODO - changed hardcoded values
+        max_dist_x = 10
+        max_dist_y = 10
+        max_dist_z = 10
+        
+        # Move the camera from the path by a certain ammount
+        camera.location[0] = float(random.uniform(-max_dist_x, max_dist_x))
+        camera.location[1] = float(random.uniform(-max_dist_y, max_dist_y))
+        camera.location[2] = float(random.uniform(-max_dist_z, max_dist_z))
+
+    # Object density conrol
+    def generated_density_control(self):
+        # TODO - change hardcoded value
+        max_density = 10
+        generate_density = random.uniform(0, max_density)
+
+        # First delete all the objects that were previously there
+        for object in bpy.data.collections['GeneratedObjects'].all_objects:
+            bpy.data.objects.remove(object, do_unlink=True)
+
+        layer_collection = bpy.data.collections['GeneratedObjects']
+
+        # Duplicate objects as given by the txt file
+        for i in range(int(generate_density)):
+            # Choose random object to duplicate
+            choose_random = random.randint(0, len(bpy.data.collections['GeneratingObjects'].all_objects) - 1)
+            index = 0
+
+            for object in bpy.data.collections['GeneratingObjects'].all_objects:
+                if index == choose_random: 
+                    generated_object = object.copy()
+
+                    action = generated_object.animation_data.action
+                    generated_object.animation_data.action = action.copy()
+
+                    generated_animation_legth = generated_object.animation_data.action.fcurves[0].keyframe_points[1].co[0] - generated_object.animation_data.action.fcurves[0].keyframe_points[0].co[0]
+                    offset = int((i + 1)*generated_animation_legth/(int(generate_density)+1))
+                    print(offset)
+
+                    # Setting which path the object should follow
+                    number_of_paths = len(bpy.data.collections['FollowingPaths'].all_objects)
+                    choose_random_path = random.randint(0, number_of_paths - 1)
+
+                    current_path = 0
+                    for path in bpy.data.collections['FollowingPaths'].all_objects:
+                        if current_path == choose_random_path:
+                            for constraint in generated_object.constraints:
+                                if constraint.type == 'FOLLOW_PATH':
+                                    constraint.target = path
+
+                        current_path += 1
+
+                    # Adjusting the path data
+                    generated_object.animation_data.action.fcurves[0].keyframe_points[0].co[0] = generated_object.animation_data.action.fcurves[0].keyframe_points[0].co[0] - offset
+                    generated_object.animation_data.action.fcurves[0].keyframe_points[1].co[0] = generated_object.animation_data.action.fcurves[0].keyframe_points[1].co[0] - offset
+
+                    fc = generated_object.animation_data.action.fcurves[0]
+
+                    for mod in fc.modifiers:
+                        fc.modifiers.remove(mod)
+
+                    fc.modifiers.new(type='CYCLES')
+
+                    layer_collection.objects.link(generated_object)
+                index += 1
+
+    def child_of_control(self):
+        camera = bpy.context.scene.camera
+
+        if(object_name == "_none_"):
+            target_object = None
+        else:
+            target_object = bpy.data.objects[object_name]
+
+        for constraint in camera.constraints:
+            if constraint.type == 'FOLLOW_PATH':
+                constraint.target = target_object
+
+    def fog_control(self):
+        fog_mat = bpy.data.materials['FogCube']
+        fog_mat.use_nodes = True
+        nodes = fog_mat.node_tree.nodes
+
+        volume_node = nodes.get("Volume Scatter")
+
+
+        # TODO - change hardoced value
+        fog = False
+        if random.uniform(0, 10) < 8:
+            fog = True
+
+        if fog == True:
+            volume_node.inputs[1].default_value = 0.01 # inputs[1] refers to density
+        else:
+            volume_node.inputs[1].default_value = 0
+
+    def animation_control(self):
+        # TODO - change hardcoded value
+        length = random.uniform(0, 1000)
+        animation_length = int(length)
+
+        scene = bpy.context.scene
+
+        random_start = int(random.uniform(0, animation_length))
+        scene.frame_start = random_start
+        scene.frame_end = random_start + animation_length
+
+    def light_offset_control(self):
+        # "Shader NodetreeAction" is the node controlling the intensity of light
+        # Make sure that the action controling it is named so
+        light_cycle_length = bpy.data.actions["Shader NodetreeAction"].fcurves[0].keyframe_points[2].co[0] - bpy.data.actions["Shader NodetreeAction"].fcurves[0].keyframe_points[0].co[0]
+
+        offset_length = random.uniform(0, light_cycle_length)
+
+        # Move the keyframes acordingly
+        bpy.data.actions["Shader NodetreeAction"].fcurves[0].keyframe_points[0].co[0] = -offset_length
+        bpy.data.actions["Shader NodetreeAction"].fcurves[0].keyframe_points[1].co[0] = light_cycle_length / 2 - offset_length
+        bpy.data.actions["Shader NodetreeAction"].fcurves[0].keyframe_points[2].co[0] = light_cycle_length - offset_length
+
+        fc = bpy.data.actions["Shader NodetreeAction"].fcurves[0]
+
+        for mod in fc.modifiers:
+            fc.modifiers.remove(mod)
+
+        fc.modifiers.new(type='CYCLES')
+
 
 # --------------------------------------------------------------------------------
 # LOADING PARAMETERS FROM FILES
@@ -60,7 +259,7 @@ class SceneControlOperator(Operator):
             print("Comment")
         elif values[0] == "camera":
             print("Camera control")
-            self.camera_control(values[1], values[2], values[3], values[4], values[5], values[6])
+            self.camera_control(values[1], values[2], values[3])
         elif values[0] == "generate_density":
             print("Generated objects density")
             self.generated_density_control(values[1])
@@ -130,7 +329,7 @@ class SceneControlOperator(Operator):
     # ----------------------------------------------------------------------------------------------
 
     # Camera control
-    def camera_control(self, x, y, z, rx, ry, rz):
+    def camera_control(self, x, y, z):
         camera = bpy.context.scene.camera
         
         # Move the camera from the path by a certain ammount
@@ -407,13 +606,15 @@ class SceneControlPanel(Panel):
         global file_path
         
         layout = self.layout
-        layout.label(text="Scene control:")
-
+        layout.label(text="Random scene generate:")
+        col = layout.column(align=True)
+        col.operator(SceneControlOperator.bl_idname, text="Randomize", icon="PLAY")
+        layout.label(text="Generate from file:")
         col = layout.column(align=True)
         file_tool = context.scene.file_tool
         col.prop(file_tool, "path")
         file_path = bpy.path.abspath("//") + file_tool.path
-        col.operator(SceneControlOperator.bl_idname, text="Load", icon="TRIA_RIGHT")
+        col.operator(SceneControlOperator.bl_idname, text="Load", icon="PLAY")
         layout.label(text="Scene generation options:")
         col = layout.column(align=True)
         col.operator(DeleteGeneratedOperator.bl_idname, text="Delete Generated", icon="TRASH")
@@ -425,6 +626,7 @@ class SceneControlPanel(Panel):
 
 
 classes = (
+    RandomizeControlOperator,
     SceneControlOperator,
     DeleteGeneratedOperator,
     RenderSceneOperator,

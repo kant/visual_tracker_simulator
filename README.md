@@ -22,6 +22,6 @@ The name of the path should contain the name of the layer/object you're followin
 ### Known issues
 * When clicking on delete generated with one of the generated objects selected, the add-on will disappear from the sidebar. In such case, just click anywhere (or anywhere on the sidebar) and it should reappear.
 
-#### Version 0.2.0
+#### Version 0.2.1
 
 ###
