@@ -5,7 +5,7 @@
 bl_info = {
     "name": "Visual Tracker Simulator",
     'author': 'Luka Kuzman',
-    "version" : (0, 2, 1),
+    "version" : (0, 2, 2),
     "blender": (2, 92, 0),
     "location" : "View3D > Sidebar > Edit Tab",
     "description" : "Gets text file with some parameters as an input, export rendered scene and a mask.",
@@ -28,6 +28,8 @@ masked_object = 1
 camera_distance = 5
 following_object = ""
 generated_density = 5
+animation_length_randomized = 250
+fog_likelyhood = 0.8
 
 
 class RandomizationProperties(PropertyGroup):
@@ -40,7 +42,7 @@ class RandomizationProperties(PropertyGroup):
 
     generated_density: IntProperty(
         name = "Generated density",
-        description="Generated density:",
+        description="Generated density",
         default = 5,
         min = 0
         )
@@ -50,6 +52,21 @@ class RandomizationProperties(PropertyGroup):
         description=":",
         default="",
         maxlen=1024
+        )
+
+    fog_likelyhood: FloatProperty(
+        name = "Fog likelyhood",
+        description = "Fog likelyhood",
+        default = 0.8,
+        min = 0,
+        max = 1
+        )
+
+    animation_length_randomized: IntProperty(
+        name = "Animation length",
+        description="Animation length",
+        default = 250,
+        min = 0
         )
 
 # --------------------------------------------------------------------------------
@@ -205,9 +222,9 @@ class RandomizeControlOperator(Operator):
         volume_node = nodes.get("Volume Scatter")
 
 
-        # TODO - change hardoced value
+        global fog_likelyhood
         fog = False
-        if random.uniform(0, 10) < 8:
+        if random.uniform(0, 1) < fog_likelyhood:
             fog = True
 
         if fog == True:
@@ -217,7 +234,8 @@ class RandomizeControlOperator(Operator):
 
     def animation_control(self):
         # TODO - change hardcoded value
-        length = random.uniform(0, 1000)
+        global animation_length_randomized
+        length = random.uniform(0, animation_length_randomized)
         animation_length = int(length)
 
         scene = bpy.context.scene
@@ -626,6 +644,8 @@ class SceneControlPanel(Panel):
         global camera_distance
         global following_object
         global generated_density
+        global fog_likelyhood
+        global animation_length_randomized
         
         layout = self.layout
         layout.label(text="Random scene generate:")
@@ -637,10 +657,14 @@ class SceneControlPanel(Panel):
         layout.prop(randomizer_tool, "camera_distance")
         layout.prop(randomizer_tool, "following_object")
         layout.prop(randomizer_tool, "generated_density")
+        layout.prop(randomizer_tool, "fog_likelyhood")
+        layout.prop(randomizer_tool, "animation_length_randomized")
         
         camera_distance = randomizer_tool.camera_distance
         following_object = randomizer_tool.following_object
         generated_density = randomizer_tool.generated_density
+        fog_likelyhood = randomizer_tool.fog_likelyhood
+        animation_length_randomized = randomizer_tool.animation_length_randomized
 
 
         layout.label(text="Generate from file:")
