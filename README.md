@@ -1,5 +1,5 @@
 # Visual Tracker Simulator
-Generates scenes on which to test visual trackers on.
+Generates scene on which to test visual trackers on, allows to render scene itself and its mask.
 
 ## How to instal
 Download the project, unzip it, create a folder called *visual_tracker_simulator*, place the _init_ file in it. Copy this folder inside the add-on folder in the location you installed Blender.
