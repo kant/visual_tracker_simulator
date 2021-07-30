@@ -24,6 +24,7 @@ The name of the path should contain the name of the layer/object you're followin
 * _GeneratedObjects_ - a collection in which the objects generated with the add-on are stored
 * _FollowingPaths_ - in here, put the paths you want the generated objects to follow. The path will be chosen at random
 Other collections can be used to make the scene view more organised, but they are not needed.
+<br>
 For each of the objects we want to follow, a layer must be created. Create a layer for each of the collections in _MainObject_, give it the same name as the collection (for example, a collection boat) and using holdout mask out all the collection except the one object itself.
 <br>
 The scene should have an HDRI skybox an animation with three keyframes under World Properties > Surface > Strength. Make sure that the animation is named *Shader NodetreeAction*. Make sure the animation is cyclic.
