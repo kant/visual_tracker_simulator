@@ -12,6 +12,8 @@ bl_info = {
     "category": "Render",
 }
 
+
+
 # --------------------------------------------------------------------------------
 # IMPORTS AND GLOBAL VARIABLES
 # --------------------------------------------------------------------------------
@@ -23,21 +25,41 @@ import random
 from bpy.types import (Panel, Operator, PropertyGroup)
 from bpy.props import (StringProperty, BoolProperty, IntProperty, FloatProperty)
 
-file_path = ""
-masked_object = 1
-camera_distance = 5
+
+
+# --------------------------------------------------------------------------------
+# RANDOMIZATION OF PARAMETERS
+# --------------------------------------------------------------------------------
+
+# Default value for the following object
 following_object = ""
+masked_object = 1
+
+# Default values for parameters
+camera_distance = 5
+track_to_distance = 5
 generated_density = 5
 animation_length_randomized = 250
 fog_likelyhood = 0.8
 
 
+
+# Values that are gonna be modified trough Blender's UI
 class RandomizationProperties(PropertyGroup):
     camera_distance: FloatProperty(
         name = "Camera distance",
         description = "Camera distance",
         default = 5,
-        min = 0
+        min = 0,
+        step = 1
+        )
+
+    track_to_distance: FloatProperty(
+        name = "Track-to distance",
+        description = "Track-to distance",
+        default = 5,
+        min = 0,
+        step = 1
         )
 
     generated_density: IntProperty(
@@ -59,7 +81,8 @@ class RandomizationProperties(PropertyGroup):
         description = "Fog likelyhood",
         default = 0.8,
         min = 0,
-        max = 1
+        max = 1,
+        step = 0.1
         )
 
     animation_length_randomized: IntProperty(
@@ -69,10 +92,9 @@ class RandomizationProperties(PropertyGroup):
         min = 0
         )
 
-# --------------------------------------------------------------------------------
-# RANDOMIZATION OF PARAMETERS FILES
-# --------------------------------------------------------------------------------
 
+
+# Randomization of parameters
 class RandomizeControlOperator(Operator):
     """Randomize Control"""
     bl_idname = "object.randomize_control"
@@ -87,6 +109,7 @@ class RandomizeControlOperator(Operator):
 
         # Randomize parameters
         self.camera_control()
+        self.track_to_control()
         self.generated_density_control()
         self.fog_control()
         self.animation_control()
@@ -99,15 +122,38 @@ class RandomizeControlOperator(Operator):
         for object in bpy.data.collections['GeneratedObjects'].all_objects:
             bpy.data.objects.remove(object, do_unlink=True)
 
+    # ----------------------------------------------------------------------------------------------
+    # STUFF THAT CONTROLS THE SCENE
+    # ----------------------------------------------------------------------------------------------
+
     # Choose following object
     def choose_following_object(self):
+        global following_object
         global masked_object
-        masked_object = random.randint(1, len(bpy.context.scene.view_layers) - 1)
+
+        mask_index = 0
 
         # Check if the user has chosen a particular object to follow
-        object_to_follow = masked_object
+        # If an arguement was given, try getting the object with that name
+        if following_object != "":
+            layer_index = 0
+            for layer in bpy.context.scene.view_layers:
+                if layer.name == following_object:
+                    mask_index = layer_index
+                layer_index += 1
+            # If an object with the given name was not found, choose a random object to follow
+            if mask_index == 0:
+                masked_object = random.randint(1, len(bpy.context.scene.view_layers) - 1)
+            # If an object with the given name was found, set that one as the one to follow
+            else:
+                masked_object = mask_index
+        else:
+            masked_object = random.randint(1, len(bpy.context.scene.view_layers) - 1)
 
         masked_object_name = bpy.context.scene.view_layers[masked_object].name
+
+        # Set the name randomly chosen object to follow to a global variable so that it can be used elsewhere
+        following_object = masked_object_name
 
         # Count how many paths the object has
         number_of_paths = 0
@@ -138,10 +184,6 @@ class RandomizeControlOperator(Operator):
 
                 current_object += 1
 
-    # ----------------------------------------------------------------------------------------------
-    # STUFF THAT CONTROLS THE SCENE
-    # ----------------------------------------------------------------------------------------------
-
     # Camera control
     def camera_control(self):
         camera = bpy.context.scene.camera
@@ -157,6 +199,28 @@ class RandomizeControlOperator(Operator):
         camera.location[0] = float(random.uniform(-max_dist_x, max_dist_x))
         camera.location[1] = float(random.uniform(-max_dist_y, max_dist_y))
         camera.location[2] = float(random.uniform(-max_dist_z, max_dist_z))
+
+    # Track-to control
+    def track_to_control(self):
+        global following_object
+        global track_to_distance
+
+        collection = bpy.data.collections[following_object]
+
+        for object in collection.all_objects:
+            if object.name == following_object:
+                track_to_object = object
+
+        max_dist = track_to_distance
+
+        max_dist_x = max_dist
+        max_dist_y = max_dist
+        max_dist_z = max_dist
+        
+        # Move the camera from the path by a certain ammount
+        track_to_object.location[0] = float(random.uniform(-max_dist_x, max_dist_x))
+        track_to_object.location[1] = float(random.uniform(-max_dist_y, max_dist_y))
+        track_to_object.location[2] = float(random.uniform(-max_dist_z, max_dist_z))
 
     # Object density conrol
     def generated_density_control(self):
@@ -233,7 +297,6 @@ class RandomizeControlOperator(Operator):
             volume_node.inputs[1].default_value = 0
 
     def animation_control(self):
-        # TODO - change hardcoded value
         global animation_length_randomized
         length = random.uniform(0, animation_length_randomized)
         animation_length = int(length)
@@ -264,9 +327,15 @@ class RandomizeControlOperator(Operator):
         fc.modifiers.new(type='CYCLES')
 
 
+
 # --------------------------------------------------------------------------------
 # LOADING PARAMETERS FROM FILES
 # --------------------------------------------------------------------------------
+
+file_path = ""
+masked_object_gl = ""
+
+
 
 class SceneControlOperator(Operator):
     """Scene Control"""
@@ -276,9 +345,6 @@ class SceneControlOperator(Operator):
     def execute(self, context):
         # Delete all the objects that the program might have generated previously
         self.delete_generated_controler()
-
-        # Determine which object to follow with a camera randomly
-        self.choose_following_object()
 
         with open(file_path) as f:
             lines = f.readlines()
@@ -292,28 +358,30 @@ class SceneControlOperator(Operator):
     def determine_command(self, current_line):
         values = current_line.split(" ")
 
+        print()
+
         if values[0] == "#":
             print("Comment")
+        elif values[0] == "following_object":
+            print("Following object control " + values[1])
+            self.choose_following_object(values[1])
         elif values[0] == "camera":
-            print("Camera control")
+            print("Camera control " + str(values[1]) + " "  + str(values[2]) + " "  + str(values[3]))
             self.camera_control(values[1], values[2], values[3])
+        elif values[0] == "track_to":
+            print("Track-to control " + str(values[1]) + " "  + str(values[2]) + " "  + str(values[3]))
+            self.track_to_control(values[1], values[2], values[3])
         elif values[0] == "generate_density":
-            print("Generated objects density")
+            print("Generated objects density " + str(values[1]))
             self.generated_density_control(values[1])
-        elif values[0] == "light":
-            print("Light control")
-            self.light_control(values[1], values[2], values[3])
-        elif values[0] == "child_of":
-            print("Follower control")
-            self.child_of_control(values[1])
         elif values[0] == "fog":
-            print("Fog control")
+            print("Fog control " + str(values[1]))
             self.fog_control(values[1])
-        elif values[0] == "animation_length":
-            print("Animation length")
-            self.animation_control(values[1])
+        elif values[0] == "animation_length_offset":
+            print("Animation length and offset " + str(values[1]) + " "  + str(values[2]))
+            self.animation_control(values[1], values[2])
         elif values[0] == "light_offset":
-            print("Light offset")
+            print("Light offset " + str(values[1]))
             self.light_offset_control(values[1])
         else:
             print("Unassigned")
@@ -323,12 +391,38 @@ class SceneControlOperator(Operator):
         for object in bpy.data.collections['GeneratedObjects'].all_objects:
             bpy.data.objects.remove(object, do_unlink=True)
 
+
+    # ----------------------------------------------------------------------------------------------
+    # STUFF THAT CONTROLS THE SCENE
+    # ----------------------------------------------------------------------------------------------
+
     # Choose following object
-    def choose_following_object(self):
-        global masked_object
-        masked_object = random.randint(1, len(bpy.context.scene.view_layers) - 1)
+    def choose_following_object(self, object_name):
+        global masked_object_gl
+
+        mask_index = 0
+
+        # Check if the user has chosen a particular object to follow
+        # If an arguement was given, try getting the object with that name
+        if object_name != "":
+            layer_index = 0
+            for layer in bpy.context.scene.view_layers:
+                if layer.name == object_name:
+                    mask_index = layer_index
+                layer_index += 1
+            # If an object with the given name was not found, choose a random object to follow
+            if mask_index == 0:
+                masked_object = random.randint(1, len(bpy.context.scene.view_layers) - 1)
+            # If an object with the given name was found, set that one as the one to follow
+            else:
+                masked_object = mask_index
+        else:
+            masked_object = random.randint(1, len(bpy.context.scene.view_layers) - 1)
 
         masked_object_name = bpy.context.scene.view_layers[masked_object].name
+
+        # Set the global variable so it can be used elsewhere
+        masked_object_gl = masked_object_name
 
         # Count how many paths the object has
         number_of_paths = 0
@@ -359,12 +453,6 @@ class SceneControlOperator(Operator):
 
                 current_object += 1
 
-
-
-    # ----------------------------------------------------------------------------------------------
-    # STUFF THAT CONTROLS THE SCENE
-    # ----------------------------------------------------------------------------------------------
-
     # Camera control
     def camera_control(self, x, y, z):
         camera = bpy.context.scene.camera
@@ -373,6 +461,20 @@ class SceneControlOperator(Operator):
         camera.location[0] = float(x)
         camera.location[1] = float(y)
         camera.location[2] = float(z)
+
+    # Track to object control
+    def track_to_control(self, x, y, z):
+        global masked_object_gl
+        collection = bpy.data.collections[masked_object_gl]
+
+        for object in collection.all_objects:
+            if object.name == masked_object_gl:
+                track_to_object = object
+        
+        # Move the object from the path by a certain ammountcamera.location[0] = float(x)
+        track_to_object.location[0] = float(x)
+        track_to_object.location[1] = float(y)
+        track_to_object.location[2] = float(z)
 
     # Object density conrol
     def generated_density_control(self, generate_density):
@@ -397,7 +499,6 @@ class SceneControlOperator(Operator):
 
                     generated_animation_legth = generated_object.animation_data.action.fcurves[0].keyframe_points[1].co[0] - generated_object.animation_data.action.fcurves[0].keyframe_points[0].co[0]
                     offset = int((i + 1)*generated_animation_legth/(int(generate_density)+1))
-                    print(offset)
 
                     # Setting which path the object should follow
                     number_of_paths = len(bpy.data.collections['FollowingPaths'].all_objects)
@@ -425,26 +526,6 @@ class SceneControlOperator(Operator):
 
                     layer_collection.objects.link(generated_object)
                 index += 1
-
-    # TODO - Currently not used
-    def light_control(self, rx, ry, rz):
-        light = bpy.data.objects['Sun']
-
-        # Setting the angle of the sun
-        light.rotation_euler[0] = math.radians(float(rx))
-        light.rotation_euler[2] = math.radians(float(rz))
-
-        light = bpy.data.lights['Sun']
-
-        # Here I used math to calculate how bright the light should be depending on the direction
-        strength = math.cos(abs(float(rx))*math.pi/180)
-        light.energy = strength
-
-        # Setting the strength of HDR to the same value
-        world = bpy.data.worlds['World']
-        world.use_nodes = True
-        surface = world.node_tree.nodes['Background']
-        surface.inputs[1].default_value = strength
     
     def child_of_control(self, object_name):
         camera = bpy.context.scene.camera
@@ -470,14 +551,14 @@ class SceneControlOperator(Operator):
         else:
             volume_node.inputs[1].default_value = 0
 
-    def animation_control(self, length):
+    def animation_control(self, length, offset):
         animation_length = int(length)
+        animation_offset = int(offset)
 
         scene = bpy.context.scene
 
-        random_start = int(random.uniform(0, animation_length))
-        scene.frame_start = random_start
-        scene.frame_end = random_start + animation_length
+        scene.frame_start = animation_offset
+        scene.frame_end = animation_offset + animation_length
 
     def light_offset_control(self, offset_frames):
         offset_lenght = int(offset_frames)
@@ -502,6 +583,10 @@ class SceneControlOperator(Operator):
 
 
 
+# --------------------------------------------------------------------------------
+# DELETING GENERATED OBJECTS
+# --------------------------------------------------------------------------------
+
 class DeleteGeneratedOperator(Operator):
     """Delete Generated"""
     bl_idname = "object.delete_generated"
@@ -512,6 +597,8 @@ class DeleteGeneratedOperator(Operator):
             bpy.data.objects.remove(object, do_unlink=True)
 
         return {'FINISHED'}
+
+
 
 # ----------------------------------------------------------------------------------------------
 # RENDERING THE SCENE AND ITS MASK
@@ -548,6 +635,8 @@ class RenderSceneOperator(Operator):
         link = links.new(default_render_layer.outputs[0], output_node.inputs[0])
 
         bpy.ops.render.render('INVOKE_DEFAULT', animation=True)
+
+
 
 class RenderMaskOperator(Operator):
     """Render Mask"""
@@ -597,6 +686,8 @@ class RenderMaskOperator(Operator):
 
         bpy.ops.render.render('INVOKE_DEFAULT', animation=True)
 
+
+
 # ----------------------------------------------------------------------------------------------
 # FILE LOADING
 # ----------------------------------------------------------------------------------------------
@@ -627,6 +718,10 @@ class FileSelector(Operator):
 
 
 
+# ----------------------------------------------------------------------------------------------
+# UI
+# ----------------------------------------------------------------------------------------------
+
 class SceneControlPanel(Panel):
     bl_idname = "object.scene_control_panel"
     bl_label = "Visual Tracker Simulator"
@@ -642,6 +737,7 @@ class SceneControlPanel(Panel):
     def draw(self, context):
         global file_path
         global camera_distance
+        global track_to_distance
         global following_object
         global generated_density
         global fog_likelyhood
@@ -655,12 +751,14 @@ class SceneControlPanel(Panel):
 
         randomizer_tool = context.scene.randomizer_tool
         layout.prop(randomizer_tool, "camera_distance")
+        layout.prop(randomizer_tool, "track_to_distance")
         layout.prop(randomizer_tool, "following_object")
         layout.prop(randomizer_tool, "generated_density")
         layout.prop(randomizer_tool, "fog_likelyhood")
         layout.prop(randomizer_tool, "animation_length_randomized")
         
         camera_distance = randomizer_tool.camera_distance
+        track_to_distance = randomizer_tool.track_to_distance
         following_object = randomizer_tool.following_object
         generated_density = randomizer_tool.generated_density
         fog_likelyhood = randomizer_tool.fog_likelyhood

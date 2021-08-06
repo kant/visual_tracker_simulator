@@ -1,6 +1,7 @@
-camera 1 1 1
-generate_density 2 
-light -1.25594 2.86467 2.86467 0 24.8003 30.2873 
+following_object Nissan 
+camera 1.0 -1.0 0 
+track_to -1.0 0 1.0 
+generate_density 3 
 fog True 
-animation_length 100
-light_offset 0
+animation_length_offset 250 100 
+light_offset 50 

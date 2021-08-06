@@ -11,7 +11,7 @@ In Object Mode, press **N** on your keyboard to get the sidebar. Click the Visua
 \
 There are two ways to generate a scene. The first is to generate the scene in Blender using *Randomize* button.
 \
-The second way is to load the scene generation parameters from a file, then clicking "Load" to generate it. One can also use **generate_sequences.py** to generate sequences. This python file can be run in a location of choice.
+The second way is to load the scene generation parameters from a file, then clicking "Load" to generate it. Due to the structure of the program, make sure that you put a whitespace at the end of each line.
 \
 To render a scene and a mask, use *Render Scene* and *Render Mask* buttons respectivelly. Since masks are rendered using *Eevee* engine, make sure to switch to Cycles render engine once mask rendering is finished, should you desire that.
 
