@@ -198,7 +198,7 @@ class RandomizeControlOperator(Operator):
         # Move the camera from the path by a certain ammount
         camera.location[0] = float(random.uniform(-max_dist_x, max_dist_x))
         camera.location[1] = float(random.uniform(-max_dist_y, max_dist_y))
-        camera.location[2] = float(random.uniform(-max_dist_z, max_dist_z))
+        camera.location[2] = float(random.uniform(0, max_dist_z))
 
     # Track-to control
     def track_to_control(self):
@@ -220,7 +220,7 @@ class RandomizeControlOperator(Operator):
         # Move the camera from the path by a certain ammount
         track_to_object.location[0] = float(random.uniform(-max_dist_x, max_dist_x))
         track_to_object.location[1] = float(random.uniform(-max_dist_y, max_dist_y))
-        track_to_object.location[2] = float(random.uniform(-max_dist_z, max_dist_z))
+        track_to_object.location[2] = float(random.uniform(0, max_dist_z))
 
     # Object density conrol
     def generated_density_control(self):
@@ -722,13 +722,16 @@ class FileSelector(Operator):
 # UI
 # ----------------------------------------------------------------------------------------------
 
-class SceneControlPanel(Panel):
-    bl_idname = "object.scene_control_panel"
-    bl_label = "Visual Tracker Simulator"
+class SceneControlPanel:
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "Visual Tracker Simulator"
+    bl_options = {"DEFAULT_CLOSED"}
     bl_context = "objectmode"
+
+class SceneControlPanel1(SceneControlPanel, Panel):
+    bl_idname = "object.scene_control_panel_1"
+    bl_label = "Random Generation"
 
     @classmethod
     def poll(cls, context):
@@ -744,7 +747,7 @@ class SceneControlPanel(Panel):
         global animation_length_randomized
         
         layout = self.layout
-        layout.label(text="Random scene generate:")
+        layout.label(text="Randomly scene generate:")
         col = layout.column(align=True)
         col.operator(RandomizeControlOperator.bl_idname, text="Randomize", icon="PLAY")
         layout.label(text="Randomization parameters limits:")
@@ -765,23 +768,37 @@ class SceneControlPanel(Panel):
         animation_length_randomized = randomizer_tool.animation_length_randomized
 
 
-        layout.label(text="Generate from file:")
+class SceneControlPanel2(SceneControlPanel, Panel):
+    bl_idname = "object.scene_control_panel_2"
+    bl_label = "Load From File"
+
+    @classmethod
+    def poll(cls, context):
+        return context.object is not None
+
+    def draw(self, context):
+        global file_path
+        layout = self.layout
         col = layout.column(align=True)
         file_tool = context.scene.file_tool
         col.prop(file_tool, "path")
         file_path = bpy.path.abspath("//") + file_tool.path
         col.operator(SceneControlOperator.bl_idname, text="Load", icon="PLAY")
 
-        layout.label(text="Scene generation options:")
-        col = layout.column(align=True)
-        col.operator(DeleteGeneratedOperator.bl_idname, text="Delete Generated", icon="TRASH")
 
-        layout.label(text="Render scene:")
+class SceneControlPanel3(SceneControlPanel, Panel):
+    bl_idname = "object.scene_control_panel_3"
+    bl_label = "Render Scene and Mask"
+
+    @classmethod
+    def poll(cls, context):
+        return context.object is not None
+
+    def draw(self, context):
+        layout = self.layout
         col = layout.column(align=True)
         col.operator(RenderSceneOperator.bl_idname, text="Render Scene", icon="SEQUENCE")
         col.operator(RenderMaskOperator.bl_idname, text="Render Mask", icon="CLIPUV_DEHLT")
-
-
 
 classes = (
     RandomizeControlOperator,
@@ -790,7 +807,9 @@ classes = (
     DeleteGeneratedOperator,
     RenderSceneOperator,
     RenderMaskOperator,
-    SceneControlPanel,
+    SceneControlPanel1,
+    SceneControlPanel2,
+    SceneControlPanel3,
     FileSettings,
     FileSelector
 )
