@@ -747,7 +747,6 @@ class SceneControlPanel1(SceneControlPanel, Panel):
         global animation_length_randomized
         
         layout = self.layout
-        layout.label(text="Randomly scene generate:")
         col = layout.column(align=True)
         col.operator(RandomizeControlOperator.bl_idname, text="Randomize", icon="PLAY")
         layout.label(text="Randomization parameters limits:")
