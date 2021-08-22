@@ -41,7 +41,7 @@ track_to_distance = 5
 generated_density = 5
 animation_length_randomized = 250
 fog_likelyhood = 0.8
-
+light_intensity_change = 1.0
 
 
 # Values that are gonna be modified trough Blender's UI
@@ -92,6 +92,15 @@ class RandomizationProperties(PropertyGroup):
         min = 0
         )
 
+    light_intensity_change: FloatProperty(
+        name = "Light intensity",
+        description="Light intensity",
+        default = 1,
+        min = 0,
+        max = 1,
+        step = 0.1
+        )
+
 
 
 # Randomization of parameters
@@ -101,6 +110,8 @@ class RandomizeControlOperator(Operator):
     bl_label = "Randomize control"
 
     def execute(self, context):
+        print()
+
         # Delete all the objects that the program might have generated previously
         self.delete_generated_controler()
 
@@ -114,6 +125,7 @@ class RandomizeControlOperator(Operator):
         self.fog_control()
         self.animation_control()
         self.light_offset_control()
+        self.light_change()
 
         return {'FINISHED'}
 
@@ -249,7 +261,6 @@ class RandomizeControlOperator(Operator):
 
                     generated_animation_legth = generated_object.animation_data.action.fcurves[0].keyframe_points[1].co[0] - generated_object.animation_data.action.fcurves[0].keyframe_points[0].co[0]
                     offset = int((i + 1)*generated_animation_legth/(int(generate_density)+1))
-                    print(offset)
 
                     # Setting which path the object should follow
                     number_of_paths = len(bpy.data.collections['FollowingPaths'].all_objects)
@@ -326,6 +337,10 @@ class RandomizeControlOperator(Operator):
 
         fc.modifiers.new(type='CYCLES')
 
+    def light_change(self):
+        global light_intensity_change
+
+        bpy.data.actions["Shader NodetreeAction"].fcurves[0].keyframe_points[1].co[1] = light_intensity_change
 
 
 # --------------------------------------------------------------------------------
@@ -383,6 +398,9 @@ class SceneControlOperator(Operator):
         elif values[0] == "light_offset":
             print("Light offset " + str(values[1]))
             self.light_offset_control(values[1])
+        elif values[0] == "light_intensity_change":
+            print("Light intensity change " + str(values[1]))
+            self.light_change(values[1])
         else:
             print("Unassigned")
 
@@ -578,6 +596,9 @@ class SceneControlOperator(Operator):
             fc.modifiers.remove(mod)
 
         fc.modifiers.new(type='CYCLES')
+
+    def light_change(self, light_change):
+        bpy.data.actions["Shader NodetreeAction"].fcurves[0].keyframe_points[1].co[1] = light_change
     
     # ----------------------------------------------------------------------------------------------
 
@@ -745,6 +766,7 @@ class SceneControlPanel1(SceneControlPanel, Panel):
         global generated_density
         global fog_likelyhood
         global animation_length_randomized
+        global light_intensity_change
         
         layout = self.layout
         col = layout.column(align=True)
@@ -758,6 +780,7 @@ class SceneControlPanel1(SceneControlPanel, Panel):
         layout.prop(randomizer_tool, "generated_density")
         layout.prop(randomizer_tool, "fog_likelyhood")
         layout.prop(randomizer_tool, "animation_length_randomized")
+        layout.prop(randomizer_tool, "light_intensity_change")
         
         camera_distance = randomizer_tool.camera_distance
         track_to_distance = randomizer_tool.track_to_distance
@@ -765,6 +788,7 @@ class SceneControlPanel1(SceneControlPanel, Panel):
         generated_density = randomizer_tool.generated_density
         fog_likelyhood = randomizer_tool.fog_likelyhood
         animation_length_randomized = randomizer_tool.animation_length_randomized
+        light_intensity_change = randomizer_tool.light_intensity_change
 
 
 class SceneControlPanel2(SceneControlPanel, Panel):
