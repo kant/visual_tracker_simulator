@@ -309,7 +309,8 @@ class RandomizeControlOperator(Operator):
 
     def animation_control(self):
         global animation_length_randomized
-        length = random.uniform(0, animation_length_randomized)
+        #length = random.uniform(0, animation_length_randomized)
+        length = animation_length_randomized
         animation_length = int(length)
 
         scene = bpy.context.scene
